@@ -10,7 +10,7 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/XTest.h>
 
-#define SCALE 1.35
+#define SCALE 1
 
 struct abs_range {
     int x_min;
@@ -33,17 +33,16 @@ int click_mouse(Display *dpy, struct input_event *ev) {
     }
 
     if (ev->value < 2) {
-        printf("Click with value %d  button: %d\n", ev->value, btn);
         XTestFakeButtonEvent(dpy, btn, ev->value, CurrentTime);
     }
 }
 
 int move_mouse(Display *dpy, float posx, float posy, int screenw, int screenh) {
     float x, y;
-    //x = (screenw * posx) * SCALE;
-    //y = (screenh * posy) * SCALE;
-    x = ((screenw * posx) - (screenw*0.3)) * SCALE;
-    y = ((screenh * posy) - (screenh*0.1)) * SCALE;
+    x = (screenw * posx) * SCALE;
+    y = (screenh * posy) * SCALE;
+    //x = ((screenw * posx) - (screenw*0.3)) * SCALE;
+    //y = ((screenh * posy) - (screenh*0.1)) * SCALE;
 
     Window root = DefaultRootWindow(dpy);
     XWarpPointer(dpy, None, root, 0, 0, 0, 0, x, y);
@@ -73,18 +72,19 @@ Display *get_resolution(int *width, int *height) {
     snum = DefaultScreen(dpy);
     *width = DisplayWidth(dpy, snum);
     *height = DisplayHeight(dpy, snum);
+    printf("screen is %dx%d\n", *width, *height);
     return dpy;
 }
 
 
 XDevice *get_trackpad(Display *dpy) {
-    XDeviceInfo *devices;
     XDevice *device; 
+    XDeviceInfo *devices;
 
     Atom touchpad_type = 0;
     touchpad_type = XInternAtom(dpy, XI_TOUCHPAD, True);
 
-    int ndevices = 10;
+    int ndevices = 50;
     devices = XListInputDevices(dpy, &ndevices);
 
     while (ndevices--) {
@@ -102,19 +102,52 @@ XDevice *get_trackpad(Display *dpy) {
     return device;
 }
 
+char *get_event_device(Display *dpy, XDevice *device) {
+    int rc, i;
+    Atom prop;
+    Atom realtype;
+    int realformat;
+    unsigned long nitems, bytes_after;
+    unsigned char *data;
+
+    prop = XInternAtom (dpy, "Device Node", 0);
+
+    rc = XGetDeviceProperty(dpy,
+        device,
+        prop,
+        0, // offset
+        5, // number of items
+        0, // false
+        AnyPropertyType,
+        &realtype,
+        &realformat,
+        &nitems,
+        &bytes_after,
+        &data);
+
+    if (rc != Success) {
+        fprintf(stderr, "Failed to read property '%s'\n", "Device Node");
+    }
+    return data;
+}
+
 int main() {
     Display *dpy;
     XDevice *device;
+    unsigned char *node;
     struct libevdev *dev;
     struct input_event ev;
     struct abs_range abs_range;
-
     float posx, posy;
     int sw, sh;
-
     int fd, rc;
 
-    fd = open("/dev/input/event17", O_RDONLY|O_NONBLOCK);
+    dpy = get_resolution(&sw, &sh);
+    device = get_trackpad(dpy);
+    node = get_event_device(dpy, device);
+    printf("Reading device from %s\n", node);
+
+    fd = open(node, O_RDONLY|O_NONBLOCK);
     if (fd < 0)
        fprintf(stderr, "error: %d %s\n", errno, strerror(errno));
     rc = libevdev_new_from_fd(fd, &dev);
@@ -129,14 +162,11 @@ int main() {
     abs_range.x_range = abs_range.x_max - abs_range.x_min;
     abs_range.y_range = abs_range.y_max - abs_range.y_min;
 
-    dpy = get_resolution(&sw, &sh);
-
-    device = get_trackpad(dpy);
-
     do {
 		struct input_event ev;
 		rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL|LIBEVDEV_READ_FLAG_BLOCKING, &ev);
 		if (rc == LIBEVDEV_READ_STATUS_SYNC) {
+            // this is not needed since we dont really care about catching up with missed events
 			//while (rc == LIBEVDEV_READ_STATUS_SYNC) {
 				//handle_event(&ev, dpy, abs_range, &posx, &posy, sw, sh);
 				//rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
