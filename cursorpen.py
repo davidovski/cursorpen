@@ -1,4 +1,14 @@
 #!/usr/bin/env python
+#
+#  cursorpen.py
+#
+#  this is the original prototype I made for this idea, taking code from 
+#  https://github.com/Wazzaps/fingerpaint and modifying to work across
+#  the whole desktop. 
+#  
+#  Use of this is not recommended, as this program is slow and inefficient
+#  compared to the C program, however it should still work.
+#  
 
 import sys
 from pynput.mouse import Button, Controller
