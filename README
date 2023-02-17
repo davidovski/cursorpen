@@ -1,0 +1,34 @@
+# Cursor Pen
+
+A simple tool for X11 to use your trackpad with absolute positioning. Allows your trackpad to be used as if it were a graphical tablet, provided that you have a stylus that it can recognise.
+
+## Build requirements
+
+- C compiler
+- make
+- libx11 (including headers)
+- libxtst
+- libxi
+- libudev
+- libevdev
+
+## Usage
+
+Build this project using `make`, and run the created binary file `./cursorpen`
+
+The tool should automatically detect your trackpad device and while it is running, any touch to the trackpad should be automatically detected.
+
+Depending on your trackpad, you may be able to use a standard touchscreen stylus to "draw".
+
+## Project TODO
+
+- Configure screen area
+- Allow screen selection
+- Disable device's default drivers (works without this, but will provide a smoother experience)
+- Integrate better into the desktop, ie as some sort of service
+- Reduce jagged edges when drawing
+- Optimise?
+
+## Contributing
+
+All contributions are welcome in any way, shape or form! 
